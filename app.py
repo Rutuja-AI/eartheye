@@ -177,92 +177,89 @@ def index():
     """Serve the main HTML page"""
     return render_template('index.html')
 
+print(f"🔥 model = {model}")
+print(f"🔥 CLASS_NAMES = {CLASS_NAMES}")
+print(f"🔥 Upload folder exists: {os.path.exists(app.config['UPLOAD_FOLDER'])}")
+
+import traceback  # Add at the top of app.py if not already
+
 @app.route('/predict', methods=['POST'])
 def predict():
-    """API endpoint for image prediction"""
+    """API endpoint for image prediction with enhanced error logging"""
     try:
-        # Check if model is loaded
+        print("🔥 /predict route called")
+
+        # Debug: Check if model is loaded
         if model is None:
+            print("❌ Model not loaded.")
             return jsonify({'error': 'Model not loaded. Please check server configuration.'}), 500
-        
-        # Validate file upload
+
+        # Debug: Check file existence
         if 'file' not in request.files:
+            print("❌ No file in request.")
             return jsonify({'error': 'No file provided'}), 400
-        
+
         file = request.files['file']
         if file.filename == '':
+            print("❌ Empty file name.")
             return jsonify({'error': 'No file selected'}), 400
-        
+
         if not allowed_file(file.filename):
+            print(f"❌ Invalid file type: {file.filename}")
             return jsonify({'error': 'Invalid file type. Please upload PNG, JPG, JPEG, or GIF.'}), 400
-        
-        # Generate unique filename to prevent conflicts
+
+        # Generate secure filename and path
         filename = secure_filename(file.filename)
         unique_filename = f"{uuid.uuid4().hex}_{filename}"
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], unique_filename)
-        
-        # Save uploaded file
+
+        print(f"📁 Saving file to: {filepath}")
         file.save(filepath)
-        
+
         try:
-            # Try primary preprocessing first
+            print("📷 Starting image preprocessing...")
             img_array = preprocess_image(filepath)
             if img_array is None:
+                print("❌ Primary preprocessing failed.")
                 return jsonify({'error': 'Failed to process image. Please try another image.'}), 400
-            
-            # Make prediction with primary preprocessing
+
+            print("🤖 Running model prediction...")
             preds = model.predict(img_array, verbose=0)
-            
-            # Check if predictions look suspicious (e.g., one class dominates everything)
+
             max_prob = np.max(preds[0])
-            if max_prob > 0.99:  # If confidence is too high, might indicate preprocessing issue
-                print("WARNING: Very high confidence detected, trying alternative preprocessing...")
-                
-                # Try alternative preprocessing
+            if max_prob > 0.99:
+                print("⚠️ Suspiciously high confidence — trying alternative preprocessing")
                 img_array_alt = alternative_preprocess_image(filepath)
                 if img_array_alt is not None:
                     preds_alt = model.predict(img_array_alt, verbose=0)
-                    print(f"Alternative predictions: {preds_alt[0]}")
-                    
-                    # Use alternative if it gives more balanced predictions
                     if np.max(preds_alt[0]) < max_prob:
-                        print("Using alternative preprocessing results")
                         preds = preds_alt
-            
-            # Debug: Print prediction probabilities
-            print(f"Raw predictions: {preds[0]}")
-            print(f"Prediction shape: {preds.shape}")
-            
-            # Check if predictions are valid
+                        print("✅ Used alternative predictions")
+
+            print(f"📊 Raw predictions: {preds[0]}")
+            print(f"🔢 Prediction shape: {preds.shape}")
+
             if np.all(np.isnan(preds[0])) or np.all(preds[0] == 0):
-                print("WARNING: All predictions are NaN or zero!")
+                print("❌ Model returned invalid predictions")
                 return jsonify({'error': 'Model produced invalid predictions. Please check the model.'}), 500
-            
+
             pred_idx = np.argmax(preds[0])
             pred_class = CLASS_NAMES[pred_idx]
             confidence = float(preds[0][pred_idx]) * 100
-            
-            # Debug: Print prediction details
-            print(f"Predicted class index: {pred_idx}")
-            print(f"Predicted class: {pred_class}")
-            print(f"Confidence: {confidence:.2f}%")
-            
-            # Get top 5 predictions
+
+            print(f"✅ Predicted: {pred_class} ({confidence:.2f}%)")
+
             top_indices = np.argsort(preds[0])[-5:][::-1]
-            top_predictions = []
-            
-            for i, idx in enumerate(top_indices):
-                conf = float(preds[0][idx]) * 100
-                print(f"Top {i+1}: {CLASS_NAMES[idx]} ({conf:.2f}%)")
-                top_predictions.append({
-                    'label': CLASS_NAMES[idx], 
-                    'confidence': conf
-                })
-            
-            # Get feature information
+            top_predictions = [{
+                'label': CLASS_NAMES[idx],
+                'confidence': float(preds[0][idx]) * 100
+            } for idx in top_indices]
+
+            for i, item in enumerate(top_predictions):
+                print(f"Top {i+1}: {item['label']} ({item['confidence']:.2f}%)")
+
             feature_info = get_feature_info(pred_class)
-            
-            # Prepare response
+
             response_data = {
                 'prediction': pred_class,
                 'confidence': confidence,
@@ -270,24 +267,24 @@ def predict():
                 'features': feature_info['features'],
                 'top_predictions': top_predictions
             }
-            
+
             return jsonify(response_data)
-            
+
         except Exception as e:
-            print(f"Prediction error: {e}")
-            return jsonify({'error': 'Failed to analyze image. Please try again.'}), 500
-            
+            print("🔥 PREDICTION INNER ERROR:")
+            traceback.print_exc()
+            return jsonify({'error': f'Failed to analyze image: {str(e)}'}), 500
+
         finally:
-            # Clean up uploaded file
-            try:
-                if os.path.exists(filepath):
-                    os.remove(filepath)
-            except Exception as e:
-                print(f"Failed to remove temporary file: {e}")
-    
+            if os.path.exists(filepath):
+                os.remove(filepath)
+                print(f"🧹 Removed uploaded file: {filepath}")
+
     except Exception as e:
-        print(f"General error in predict route: {e}")
-        return jsonify({'error': 'An unexpected error occurred. Please try again.'}), 500
+        print("🔥 GENERAL PREDICT ROUTE ERROR:")
+        traceback.print_exc()
+        return jsonify({'error': f'Unexpected error: {str(e)}'}), 500
+
 
 @app.errorhandler(413)
 def too_large(e):
