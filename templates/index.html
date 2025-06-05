@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earth Feature Classifier</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 700px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            padding: 40px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            transition: all 0.3s ease;
+        }
+
+        .container:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 10px;
+            letter-spacing: -0.02em;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 1.1em;
+            font-weight: 400;
+        }
+
+        .upload-section {
+            margin-bottom: 30px;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .file-input-label {
+            display: block;
+            padding: 15px 20px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 12px;
+            cursor: pointer;
+            text-align: center;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .file-input-label::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .file-input-label:hover::before {
+            left: 100%;
+        }
+
+        .file-input-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        #pasteArea {
+            border: 3px dashed #ddd;
+            border-radius: 16px;
+            padding: 40px 20px;
+            text-align: center;
+            color: #888;
+            cursor: pointer;
+            min-height: 200px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            position: relative;
+            background: linear-gradient(45deg, #f8f9ff, #fff);
+        }
+
+        #pasteArea:hover, #pasteArea:focus {
+            border-color: #667eea;
+            background: linear-gradient(45deg, #f0f2ff, #f8f9ff);
+            color: #667eea;
+            outline: none;
+            transform: scale(1.02);
+        }
+
+        #pasteArea.dragover {
+            border-color: #764ba2;
+            background: linear-gradient(45deg, #f5f0ff, #faf8ff);
+            transform: scale(1.05);
+        }
+
+        .paste-icon {
+            font-size: 3em;
+            margin-bottom: 15px;
+            opacity: 0.6;
+            transition: all 0.3s ease;
+        }
+
+        #pasteArea:hover .paste-icon {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+
+        .paste-text {
+            font-size: 1.1em;
+            font-weight: 500;
+            margin-bottom: 8px;
+        }
+
+        .paste-subtext {
+            font-size: 0.9em;
+            opacity: 0.7;
+        }
+
+        #preview {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 18px;
+            background: linear-gradient(135deg, #11998e, #38ef7d);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 1.1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .submit-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(17, 153, 142, 0.3);
+        }
+
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .submit-btn.loading {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .loading-spinner {
+            display: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid transparent;
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .result-section {
+            margin-top: 40px;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .result-section.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .uploaded-image-container {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .uploaded-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 16px;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .uploaded-image:hover {
+            transform: scale(1.02);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
+        }
+
+        .result-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.3);
+            margin-bottom: 20px;
+        }
+
+        .prediction-header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .prediction-icon {
+            font-size: 2.5em;
+            margin-right: 15px;
+        }
+
+        .prediction-title {
+            font-size: 2em;
+            font-weight: 700;
+            text-align: center;
+        }
+
+        .prediction-description {
+            font-size: 1.1em;
+            text-align: center;
+            opacity: 0.9;
+            margin-bottom: 25px;
+            line-height: 1.5;
+        }
+
+        .confidence-section {
+            margin-bottom: 25px;
+        }
+
+        .confidence-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .confidence-bar {
+            width: 100%;
+            height: 12px;
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #38ef7d, #11998e);
+            border-radius: 6px;
+            width: 0%;
+            transition: width 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .confidence-fill::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 2s infinite;
+        }
+
+        @keyframes shimmer {
+            0% { transform: translateX(-100%); }
+            100% { transform: translateX(100%); }
+        }
+
+        .feature-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 25px;
+            justify-content: center;
+        }
+
+        .tag {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 10px 18px;
+            border-radius: 25px;
+            font-size: 0.9em;
+            font-weight: 500;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .tag:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .top-predictions {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .predictions-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .prediction-item {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .prediction-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+
+        .prediction-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .prediction-name {
+            font-weight: 600;
+            font-size: 1.05em;
+        }
+
+        .prediction-confidence {
+            font-size: 1em;
+            font-weight: 600;
+            opacity: 0.9;
+        }
+
+        .prediction-rank {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.9em;
+            margin-right: 15px;
+        }
+
+        .error {
+            background: linear-gradient(135deg, #ff416c, #ff4b2b);
+            color: white;
+            padding: 20px;
+            border-radius: 16px;
+            margin-top: 20px;
+            text-align: center;
+            font-weight: 600;
+            box-shadow: 0 10px 30px rgba(255, 65, 108, 0.3);
+        }
+
+        .error-icon {
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px;
+                margin: 10px;
+            }
+            
+            h1 {
+                font-size: 2em;
+            }
+            
+            #pasteArea {
+                min-height: 150px;
+                padding: 30px 15px;
+            }
+
+            .result-card {
+                padding: 25px 20px;
+            }
+
+            .prediction-title {
+                font-size: 1.6em;
+            }
+
+            .prediction-icon {
+                font-size: 2em;
+                margin-right: 10px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌍 Earth Classifier</h1>
+            <p class="subtitle">AI-powered Earth feature recognition using satellite imagery</p>
+        </div>
+
+        <form id="uploadForm" enctype="multipart/form-data">
+            <div class="upload-section">
+                <div class="file-input-wrapper">
+                    <input id="fileInput" type="file" name="file" accept="image/*" required>
+                    <label for="fileInput" class="file-input-label">
+                        📁 Choose Image File
+                    </label>
+                </div>
+
+                <div id="pasteArea" tabindex="0">
+                    <div class="paste-icon">🖼️</div>
+                    <div class="paste-text">Drop image here or paste from clipboard</div>
+                    <div class="paste-subtext">Supports JPG, PNG, GIF • Max 10MB</div>
+                    <img id="preview" style="display:none;" />
+                </div>
+
+                <button class="submit-btn" type="submit" id="submitBtn">
+                    <div class="loading-spinner" id="spinner"></div>
+                    <span id="submitText">🚀 Analyze Earth Feature</span>
+                </button>
+            </div>
+        </form>
+
+        <div id="flashMessages" style="display:none;"></div>
+        
+        <div id="resultContainer" class="result-section" style="display:none;">
+            <div class="uploaded-image-container">
+                <img id="uploadedImage" class="uploaded-image" alt="Uploaded Image" style="display:none;" />
+            </div>
+            
+            <div class="result-card">
+                <div class="prediction-header">
+                    <div class="prediction-icon" id="predictionIcon">🌍</div>
+                    <div class="prediction-title" id="predictionTitle"></div>
+                </div>
+                
+                <div class="prediction-description" id="predictionDescription"></div>
+                
+                <div class="confidence-section">
+                    <div class="confidence-label">
+                        <span>Confidence Level</span>
+                        <span id="confidenceText"></span>
+                    </div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" id="confidenceFill"></div>
+                    </div>
+                </div>
+                
+                <div class="feature-tags" id="featureTags"></div>
+                
+                <div class="top-predictions" id="topPredictions" style="display: none;">
+                    <div class="predictions-title">🏆 Top Predictions</div>
+                    <div id="predictionsList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Enhanced feature descriptions and emojis
+        const FEATURE_INFO = {
+            'AnnualCrop': {
+                icon: '🌾',
+                description: 'Agricultural land used for crops that are planted and harvested within a year, such as wheat, corn, or soybeans.',
+                tags: ['Agriculture', 'Farming', 'Seasonal', 'Food Production']
+            },
+            'Forest': {
+                icon: '🌲',
+                description: 'Dense woodland areas with significant tree coverage, important for biodiversity and carbon sequestration.',
+                tags: ['Nature', 'Trees', 'Wildlife', 'Carbon Sink']
+            },
+            'HerbaceousVegetation': {
+                icon: '🌿',
+                description: 'Areas dominated by soft-stemmed plants and grasses, including grasslands and meadows.',
+                tags: ['Grassland', 'Natural', 'Grazing', 'Biodiversity']
+            },
+            'Highway': {
+                icon: '🛣️',
+                description: 'Major transportation infrastructure including roads, highways and urban transit networks.',
+                tags: ['Transportation', 'Infrastructure', 'Urban', 'Traffic']
+            },
+            'Industrial': {
+                icon: '🏭',
+                description: 'Manufacturing and industrial facilities including factories, warehouses, and processing plants.',
+                tags: ['Manufacturing', 'Industry', 'Commercial', 'Development']
+            },
+            'Pasture': {
+                icon: '🐄',
+                description: 'Grassland areas used for livestock grazing, typically managed for animal agriculture.',
+                tags: ['Livestock', 'Grazing', 'Agriculture', 'Rural']
+            },
+            'PermanentCrop': {
+                icon: '🍎',
+                description: 'Agricultural areas with perennial crops like orchards, vineyards, and tree plantations.',
+                tags: ['Orchard', 'Vineyard', 'Perennial', 'Long-term']
+            },
+            'Residential': {
+                icon: '🏘️',
+                description: 'Urban and suburban areas with housing developments and residential neighborhoods.',
+                tags: ['Housing', 'Urban', 'Suburban', 'Community']
+            },
+            'River': {
+                icon: '🏞️',
+                description: 'Water bodies including rivers, streams, lakes, and other freshwater features.',
+                tags: ['Water', 'Freshwater', 'Natural', 'Ecosystem']
+            },
+            'SeaLake': {
+                icon: '🌊',
+                description: 'Large water bodies including seas, large lakes, and coastal marine environments.',
+                tags: ['Water', 'Marine', 'Coastal', 'Large Water Body']
+            }
+        };
+
+        const pasteArea = document.getElementById('pasteArea');
+        const fileInput = document.getElementById('fileInput');
+        const preview = document.getElementById('preview');
+        const submitBtn = document.getElementById('submitBtn');
+        const submitText = document.getElementById('submitText');
+        const spinner = document.getElementById('spinner');
+        const uploadForm = document.getElementById('uploadForm');
+        const resultContainer = document.getElementById('resultContainer');
+
+        // Enhanced paste functionality
+        pasteArea.addEventListener('click', () => {
+            pasteArea.focus();
+        });
+
+        pasteArea.addEventListener('paste', function(e) {
+            e.preventDefault();
+            const items = (e.clipboardData || e.originalEvent.clipboardData).items;
+            
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const blob = items[i].getAsFile();
+                    handleImageFile(blob);
+                    break;
+                }
+            }
+        });
+
+        // Drag and drop functionality
+        pasteArea.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            pasteArea.classList.add('dragover');
+        });
+
+        pasteArea.addEventListener('dragleave', function(e) {
+            e.preventDefault();
+            pasteArea.classList.remove('dragover');
+        });
+
+        pasteArea.addEventListener('drop', function(e) {
+            e.preventDefault();
+            pasteArea.classList.remove('dragover');
+            
+            const files = e.dataTransfer.files;
+            if (files.length > 0 && files[0].type.startsWith('image/')) {
+                handleImageFile(files[0]);
+            }
+        });
+
+        // File input change
+        fileInput.addEventListener('change', function() {
+            if (fileInput.files && fileInput.files[0]) {
+                handleImageFile(fileInput.files[0]);
+            } else {
+                resetPreview();
+            }
+        });
+
+        function handleImageFile(file) {
+            // Validate file size (10MB max)
+            if (file.size > 10 * 1024 * 1024) {
+                showError('File size must be less than 10MB');
+                return;
+            }
+
+            const url = URL.createObjectURL(file);
+            preview.src = url;
+            preview.style.display = 'block';
+            
+            // Hide paste instructions
+            pasteArea.querySelector('.paste-icon').style.display = 'none';
+            pasteArea.querySelector('.paste-text').style.display = 'none';
+            pasteArea.querySelector('.paste-subtext').style.display = 'none';
+            
+            // Set file input for form submission
+            const dt = new DataTransfer();
+            dt.items.add(file);
+            fileInput.files = dt.files;
+        }
+
+        function resetPreview() {
+            preview.style.display = 'none';
+            pasteArea.querySelector('.paste-icon').style.display = 'block';
+            pasteArea.querySelector('.paste-text').style.display = 'block';
+            pasteArea.querySelector('.paste-subtext').style.display = 'block';
+        }
+
+        // Enhanced form submission with API
+        uploadForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            if (!fileInput.files || !fileInput.files[0]) {
+                showError('Please select an image first');
+                return;
+            }
+
+            // Show loading state
+            setLoadingState(true);
+            hideResult();
+
+            // Create FormData
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            // Actual API call to backend
+            fetch('/predict', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                setLoadingState(false);
+                
+                if (data.error) {
+                    showError(data.error);
+                } else {
+                    displayResult(data);
+                }
+            })
+            .catch(err => {
+                setLoadingState(false);
+                showError('An error occurred. Please try again.');
+                console.error(err);
+            });
+        });
+
+        function setLoadingState(isLoading) {
+            if (isLoading) {
+                submitBtn.classList.add('loading');
+                submitText.innerHTML = '🔍 Analyzing Image...';
+                spinner.style.display = 'inline-block';
+                submitBtn.disabled = true;
+            } else {
+                submitBtn.classList.remove('loading');
+                submitText.innerHTML = '🚀 Analyze Earth Feature';
+                spinner.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        }
+
+        function showError(message) {
+            const flashMessages = document.getElementById('flashMessages');
+            flashMessages.innerHTML = `
+                <div class="error">
+                    <div class="error-icon">⚠️</div>
+                    <div>${message}</div>
+                </div>
+            `;
+            flashMessages.style.display = 'block';
+
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                flashMessages.style.display = 'none';
+            }, 5000);
+        }
+
+        function hideResult() {
+            resultContainer.style.display = 'none';
+            resultContainer.classList.remove('show');
+        }
+
+        function displayResult(data) {
+            // Get feature info or use defaults
+            const featureInfo = FEATURE_INFO[data.prediction] || {
+                icon: '🌍',
+                description: data.description || `Predicted feature: ${data.prediction}`,
+                tags: [data.prediction]
+            };
+
+            // Update prediction display
+            document.getElementById('predictionIcon').textContent = featureInfo.icon;
+            document.getElementById('predictionTitle').textContent = data.prediction.replace(/([A-Z])/g, ' $1').trim();
+            document.getElementById('predictionDescription').textContent = featureInfo.description;
+
+            // Update confidence with animation
+            const confidenceValue = Math.min(Math.max(data.confidence, 0), 100);
+            document.getElementById('confidenceText').textContent = `${confidenceValue.toFixed(1)}%`;
+            
+            // Animate confidence bar
+            setTimeout(() => {
+                document.getElementById('confidenceFill').style.width = `${confidenceValue}%`;
+            }, 500);
+
+            // Update feature tags
+            const featureTags = document.getElementById('featureTags');
+            featureTags.innerHTML = '';
+            const tags = data.features || featureInfo.tags || [data.prediction];
+            tags.forEach(feature => {
+                const tag = document.createElement('div');
+                tag.className = 'tag';
+                tag.textContent = feature;
+                featureTags.appendChild(tag);
+            });
+
+            // Update top predictions
+            const topPredictions = document.getElementById('topPredictions');
+            const predictionsList = document.getElementById('predictionsList');
+            predictionsList.innerHTML = '';
+            
+            if (data.top_predictions && data.top_predictions.length > 0) {
+                data.top_predictions.forEach((prediction, index) => {
+                    const item = document.createElement('div');
+                    item.className = 'prediction-item';
+                    
+                    const predictionName = prediction.label.replace(/([A-Z])/g, ' $1').trim();
+                    const featureIcon = FEATURE_INFO[prediction.label]?.icon || '🌍';
+                    
+                    item.innerHTML = `
+                        <div style="display: flex; align-items: center;">
+                            <div class="prediction-rank">${index + 1}</div>
+                            <div>
+                                <div class="prediction-name">${featureIcon} ${predictionName}</div>
+                            </div>
+                        </div>
+                        <div class="prediction-confidence">${prediction.confidence.toFixed(1)}%</div>
+                    `;
+                    predictionsList.appendChild(item);
+                });
+                topPredictions.style.display = 'block';
+            } else {
+                topPredictions.style.display = 'none';
+            }
+
+            // Show uploaded image
+            const uploadedImage = document.getElementById('uploadedImage');
+            if (fileInput.files && fileInput.files[0]) {
+                uploadedImage.src = URL.createObjectURL(fileInput.files[0]);
+                uploadedImage.style.display = 'block';
+            }
+
+            // Show result with animation
+            resultContainer.style.display = 'block';
+            setTimeout(() => {
+                resultContainer.classList.add('show');
+                resultContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 100);
+        }
+    </script>
+</body>
+</html>
