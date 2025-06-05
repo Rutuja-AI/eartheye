@@ -9,10 +9,10 @@ from werkzeug.utils import secure_filename
 import json
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'  # Change this to a random secret key
+app.secret_key = 'scorgal'  # Change this to a random secret key
 
 # Load the trained model
-MODEL_PATH = os.path.join('..', 'models', 'earth_classifier.keras')
+MODEL_PATH = os.path.join('models', 'earth_classifier.keras')
 try:
     model = load_model(MODEL_PATH)
     print(f"Model loaded successfully from {MODEL_PATH}")
@@ -51,7 +51,7 @@ except Exception as e:
                   'River', 'SeaLake']
 
 # Load class indices mapping if available
-CLASS_INDICES_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), '../models/class_indices.json'))
+CLASS_INDICES_PATH = os.path.join('models', 'class_indices.json')
 if os.path.exists(CLASS_INDICES_PATH):
     with open(CLASS_INDICES_PATH, 'r') as f:
         class_indices = json.load(f)
