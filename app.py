@@ -301,6 +301,19 @@ def not_found(e):
 def internal_error(e):
     return jsonify({'error': 'Internal server error'}), 500
 
+@app.route('/predict', methods=['POST'])
+def predict():
+    try:
+        # your current logic
+        file = request.files['file']
+        img = Image.open(file)
+        # ... process & predict ...
+        return jsonify({'prediction': result})
+
+    except Exception as e:
+        print("🔥 PREDICT ERROR:", e)
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     print("Starting Earth Feature Classifier Flask App...")
     print(f"Model loaded: {'Yes' if model is not None else 'No'}")
