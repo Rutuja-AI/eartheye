@@ -1,7 +1,15 @@
 services:
   - type: web
-    name: eartheye-classifier
+    name: eartheye
     env: python
-    buildCommand: ""
-    startCommand: gunicorn app:app
+    region: oregon
     plan: free
+    buildCommand: |
+      apt-get update && apt-get install -y git-lfs
+      git lfs install
+      git lfs pull
+      pip install -r requirements.txt
+    startCommand: gunicorn app:app
+    envVars:
+      - key: PYTHONUNBUFFERED
+        value: "1"
