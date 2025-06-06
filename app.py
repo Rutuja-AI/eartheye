@@ -38,8 +38,6 @@ else:
     print("❌ No .keras, .h5, or SavedModel found in the main directory.")
 from keras.layers import TFSMLayer  # Add this import
 
-MODEL_PATH = os.path.join('models', 'earth_classifier')
-
 model = None
 model_type = None
 
