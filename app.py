@@ -36,22 +36,24 @@ if MODEL_PATH:
     print(f"Model file extension: '{model_ext}'")
 else:
     print("❌ No .keras, .h5, or SavedModel found in the main directory.")
-from keras.layers import TFSMLayer  # Add this import
 
 model = None
 model_type = None
 
 try:
-    if os.path.isdir(MODEL_PATH):
+    if MODEL_PATH and os.path.isdir(MODEL_PATH):
         print(f"🧠 Detected SavedModel directory at {MODEL_PATH}, loading with TFSMLayer...")
         model = TFSMLayer(MODEL_PATH, call_endpoint='serving_default')
         model_type = 'tfsm'
         print(f"✅ Model loaded as TFSMLayer from {MODEL_PATH}")
-    else:
+    elif MODEL_PATH and os.path.isfile(MODEL_PATH):
         print(f"📦 Detected .keras or .h5 file at {MODEL_PATH}, loading with load_model()...")
         model = load_model(MODEL_PATH)
         model_type = 'keras'
         print(f"✅ Model loaded with load_model() from {MODEL_PATH}")
+    else:
+        print("❌ No valid model file or directory found.")
+        model = None
 except Exception as e:
     print(f"❌ Error loading model: {e}")
     model = None
