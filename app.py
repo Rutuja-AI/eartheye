@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
 from tensorflow.keras.models import load_model
-from tensorflow.keras.layers import TFSMLayer  # Add this import
+from tensorflow.keras.layers import TFSMLayer
 from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 import numpy as np
@@ -12,52 +12,52 @@ import json
 app = Flask(__name__)
 app.secret_key = 'scorgal'  # Change this to a random secret key
 
-# Try to find a .keras or .h5 model in the main directory
+# Model path logic
 KERAS_MODEL_PATH = os.path.abspath('earth_classifier.keras')
 H5_MODEL_PATH = os.path.abspath('earth_classifier.h5')
+SAVEDMODEL_PATH = os.path.abspath('earth_classifier_savedmodel')
 
-if os.path.isfile(KERAS_MODEL_PATH):
+# Print main directory contents for debugging
+print("Contents of main directory:", os.listdir('.'))
+
+MODEL_PATH = None
+if os.path.isdir(SAVEDMODEL_PATH):
+    MODEL_PATH = SAVEDMODEL_PATH
+elif os.path.isfile(KERAS_MODEL_PATH):
     MODEL_PATH = KERAS_MODEL_PATH
 elif os.path.isfile(H5_MODEL_PATH):
     MODEL_PATH = H5_MODEL_PATH
-else:
-    MODEL_PATH = None
 
 if MODEL_PATH:
-    print(f"Using model file: {MODEL_PATH}")
+    print(f"Using model: {MODEL_PATH}")
+    print(f"Is directory: {os.path.isdir(MODEL_PATH)}")
+    print(f"Is file: {os.path.isfile(MODEL_PATH)}")
+    model_ext = os.path.splitext(MODEL_PATH)[1].lower() if not os.path.isdir(MODEL_PATH) else '[SavedModel dir]'
+    print(f"Model file extension: '{model_ext}'")
 else:
-    print("❌ No .keras or .h5 model file found in the main directory.")
+    print("❌ No .keras, .h5, or SavedModel found in the main directory.")
+from keras.layers import TFSMLayer  # Add this import
 
-print("Contents of main directory:", os.listdir(os.path.dirname(MODEL_PATH)))
-
-# Print model path info and extension
-print(f"MODEL_PATH: {MODEL_PATH}")
-print(f"Is directory: {os.path.isdir(MODEL_PATH)}")
-print(f"Is file: {os.path.isfile(MODEL_PATH)}")
-model_ext = os.path.splitext(MODEL_PATH)[1].lower()
-print(f"Model file extension: '{model_ext}'")
+MODEL_PATH = os.path.join('models', 'earth_classifier')
 
 model = None
-model_type = None  # Track how the model was loaded
+model_type = None
 
 try:
-    if MODEL_PATH and os.path.isdir(MODEL_PATH):
-        # It's a SavedModel directory, use TFSMLayer
-        print(f"Detected SavedModel directory at {MODEL_PATH}, loading with TFSMLayer...")
+    if os.path.isdir(MODEL_PATH):
+        print(f"🧠 Detected SavedModel directory at {MODEL_PATH}, loading with TFSMLayer...")
         model = TFSMLayer(MODEL_PATH, call_endpoint='serving_default')
         model_type = 'tfsm'
         print(f"✅ Model loaded as TFSMLayer from {MODEL_PATH}")
-    elif MODEL_PATH and os.path.isfile(MODEL_PATH):
-        print(f"Detected model file at {MODEL_PATH}, loading with load_model...")
-        model = load_model(MODEL_PATH, custom_objects={})
-        model_type = 'keras'
-        print(f"✅ Model loaded with load_model from {MODEL_PATH}")
     else:
-        print("❌ No valid model file or directory found.")
-        model = None
+        print(f"📦 Detected .keras or .h5 file at {MODEL_PATH}, loading with load_model()...")
+        model = load_model(MODEL_PATH)
+        model_type = 'keras'
+        print(f"✅ Model loaded with load_model() from {MODEL_PATH}")
 except Exception as e:
     print(f"❌ Error loading model: {e}")
     model = None
+
 
 
 # Dynamically load class names in the correct order
