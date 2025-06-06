@@ -12,7 +12,9 @@ app = Flask(__name__)
 app.secret_key = 'scorgal'  # Change this to a random secret key
 
 # Load the trained model
-MODEL_PATH = os.path.join('models', 'earth_classifier')  # No extension
+MODEL_PATH = os.path.join('models', 'earth_classifier.keras')
+
+
 
 try:
     model = load_model(MODEL_PATH)
