@@ -48,9 +48,15 @@ try:
         print(f"✅ Model loaded as TFSMLayer from {MODEL_PATH}")
     elif MODEL_PATH and os.path.isfile(MODEL_PATH):
         print(f"📦 Detected .keras or .h5 file at {MODEL_PATH}, loading with load_model()...")
-        model = load_model(MODEL_PATH)
-        model_type = 'keras'
-        print(f"✅ Model loaded with load_model() from {MODEL_PATH}")
+        try:
+            model = load_model(MODEL_PATH)
+            model_type = 'keras'
+            print(f"✅ Model loaded with load_model() from {MODEL_PATH}")
+        except Exception as e:
+            print(f"❌ Error loading model file: {e}")
+            print("⚠️ Your .keras or .h5 file is likely not compatible with Keras 3.x. Use a SavedModel directory exported with Keras 2.x.")
+            model = None
+            model_type = None
     else:
         print("❌ No valid model file or directory found.")
         model = None
