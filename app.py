@@ -165,6 +165,9 @@ def index():
 
 @app.route('/predict', methods=['POST'])
 def predict():
+    print("🔥 PREDICTION REQUEST RECEIVED!")  # ADD THIS
+    print(f"Request method: {request.method}")   # ADD THIS  
+    print(f"Request files: {request.files}")     # ADD THIS
     try:
         if model is None:
             return jsonify({'error': 'Model not loaded'}), 500
