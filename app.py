@@ -165,10 +165,11 @@ def index():
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    print("🔥 PREDICTION REQUEST RECEIVED!")  # ADD THIS
-    print(f"Request method: {request.method}")   # ADD THIS  
-    print(f"Request files: {request.files}")     # ADD THIS
+    print("🔥 PREDICTION REQUEST RECEIVED!")
+    print(f"Request method: {request.method}")
+    print(f"Request files: {request.files}")
     try:
+        print("🔥 Loading model...")
         if model is None:
             return jsonify({'error': 'Model not loaded'}), 500
         if 'file' not in request.files:
@@ -180,9 +181,11 @@ def predict():
         path = os.path.join(app.config['UPLOAD_FOLDER'], fname)
         file.save(path)
         try:
+            print("🔥 Processing image...")
             img = preprocess_image(path)
             if img is None:
                 return jsonify({'error': 'Failed to preprocess image'}), 400
+            print("🔥 Making prediction...")
             preds = model(img)
             if preds is None or len(preds) == 0:
                 return jsonify({'error': 'Invalid prediction output'}), 500
@@ -199,6 +202,7 @@ def predict():
                 } for i in top5]
             }
             result.update(get_feature_info(result['prediction']))
+            print("🔥 Returning result...")
             return jsonify(result)
         finally:
             if os.path.exists(path):
