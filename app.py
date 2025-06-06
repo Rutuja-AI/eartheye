@@ -267,8 +267,8 @@ def predict():
 
             # Use correct prediction method depending on model type
             if model_type == 'tfsm':
-                # TFSMLayer expects a dict input with key 'inputs'
-                preds = model({'inputs': img_array}).numpy()
+                # TFSMLayer: pass input directly, set training=False
+                preds = model(img_array, training=False).numpy()
             else:
                 preds = model.predict(img_array, verbose=0)
 
