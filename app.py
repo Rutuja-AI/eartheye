@@ -14,6 +14,15 @@ app.secret_key = 'scorgal'  # Change this to a random secret key
 
 MODEL_PATH = os.path.join('models', 'earth_classifier.keras')
 
+print("Contents of models directory:", os.listdir(os.path.dirname(MODEL_PATH)))
+
+# Print model path info and extension
+print(f"MODEL_PATH: {MODEL_PATH}")
+print(f"Is directory: {os.path.isdir(MODEL_PATH)}")
+print(f"Is file: {os.path.isfile(MODEL_PATH)}")
+model_ext = os.path.splitext(MODEL_PATH)[1].lower()
+print(f"Model file extension: '{model_ext}'")
+
 model = None
 model_type = None  # Track how the model was loaded
 
@@ -25,9 +34,9 @@ try:
         model_type = 'tfsm'
         print(f"✅ Model loaded as TFSMLayer from {MODEL_PATH}")
     else:
-        # It's a file (.keras or .h5)
         print(f"Detected model file at {MODEL_PATH}, loading with load_model...")
-        model = load_model(MODEL_PATH)
+        # Add custom_objects if needed, e.g. {'CustomLayer': CustomLayer}
+        model = load_model(MODEL_PATH, custom_objects={})
         model_type = 'keras'
         print(f"✅ Model loaded with load_model from {MODEL_PATH}")
 except Exception as e:
