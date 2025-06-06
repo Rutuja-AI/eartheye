@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, jsonify, flash
 from tensorflow.keras.models import load_model
+from tensorflow.keras.layers import TFSMLayer  # Add this import
 from tensorflow.keras.preprocessing import image
 from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
 import numpy as np
@@ -11,17 +12,28 @@ import json
 app = Flask(__name__)
 app.secret_key = 'scorgal'  # Change this to a random secret key
 
-# Load the trained model
 MODEL_PATH = os.path.join('models', 'earth_classifier.keras')
 
-
+model = None
+model_type = None  # Track how the model was loaded
 
 try:
-    model = load_model(MODEL_PATH)
-    print(f"Model loaded successfully from {MODEL_PATH}")
+    if os.path.isdir(MODEL_PATH):
+        # It's a SavedModel directory, use TFSMLayer
+        print(f"Detected SavedModel directory at {MODEL_PATH}, loading with TFSMLayer...")
+        model = TFSMLayer(MODEL_PATH, call_endpoint='serving_default')
+        model_type = 'tfsm'
+        print(f"✅ Model loaded as TFSMLayer from {MODEL_PATH}")
+    else:
+        # It's a file (.keras or .h5)
+        print(f"Detected model file at {MODEL_PATH}, loading with load_model...")
+        model = load_model(MODEL_PATH)
+        model_type = 'keras'
+        print(f"✅ Model loaded with load_model from {MODEL_PATH}")
 except Exception as e:
-    print(f"Error loading model: {e}")
+    print(f"❌ Error loading model: {e}")
     model = None
+
 
 # Dynamically load class names in the correct order
 try:
@@ -227,7 +239,13 @@ def predict():
                 return jsonify({'error': 'Failed to process image. Please try another image.'}), 400
 
             print("🤖 Running model prediction...")
-            preds = model.predict(img_array, verbose=0)
+
+            # Use correct prediction method depending on model type
+            if model_type == 'tfsm':
+                # TFSMLayer expects a dict input with key 'inputs'
+                preds = model({'inputs': img_array}).numpy()
+            else:
+                preds = model.predict(img_array, verbose=0)
 
             max_prob = np.max(preds[0])
             if max_prob > 0.99:
