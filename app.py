@@ -159,6 +159,43 @@ def not_found(e): return jsonify({'error': 'Not found'}), 404
 @app.errorhandler(500)
 def internal_error(e): return jsonify({'error': 'Server error'}), 500
 
+
+# Add this debug endpoint to your app.py (temporarily)
+
+@app.route('/debug')
+def debug():
+    """Debug endpoint to check file structure on server"""
+    import os
+    
+    debug_info = {}
+    
+    # Check current directory
+    debug_info['current_dir'] = os.getcwd()
+    debug_info['files_in_root'] = os.listdir('.')
+    
+    # Check models directory
+    models_path = 'models'
+    if os.path.exists(models_path):
+        debug_info['models_exists'] = True
+        debug_info['files_in_models'] = os.listdir(models_path)
+        
+        # Check specific model files
+        keras_path = os.path.join('models', 'earth_classifier.keras')
+        savedmodel_path = os.path.join('models', 'earth_classifier')
+        
+        debug_info['keras_file_exists'] = os.path.exists(keras_path)
+        debug_info['savedmodel_dir_exists'] = os.path.exists(savedmodel_path)
+        
+        if os.path.exists(savedmodel_path):
+            debug_info['savedmodel_contents'] = os.listdir(savedmodel_path)
+    else:
+        debug_info['models_exists'] = False
+    
+    # Check class indices
+    class_indices_path = 'class_indices.json'
+    debug_info['class_indices_exists'] = os.path.exists(class_indices_path)
+    
+    return jsonify(debug_info)
 # --- Start App ---
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
