@@ -12,9 +12,23 @@ import json
 app = Flask(__name__)
 app.secret_key = 'scorgal'  # Change this to a random secret key
 
-MODEL_PATH = os.path.join('models', 'earth_classifier.keras')
+# Try to find a .keras or .h5 model in the main directory
+KERAS_MODEL_PATH = os.path.abspath('earth_classifier.keras')
+H5_MODEL_PATH = os.path.abspath('earth_classifier.h5')
 
-print("Contents of models directory:", os.listdir(os.path.dirname(MODEL_PATH)))
+if os.path.isfile(KERAS_MODEL_PATH):
+    MODEL_PATH = KERAS_MODEL_PATH
+elif os.path.isfile(H5_MODEL_PATH):
+    MODEL_PATH = H5_MODEL_PATH
+else:
+    MODEL_PATH = None
+
+if MODEL_PATH:
+    print(f"Using model file: {MODEL_PATH}")
+else:
+    print("❌ No .keras or .h5 model file found in the main directory.")
+
+print("Contents of main directory:", os.listdir(os.path.dirname(MODEL_PATH)))
 
 # Print model path info and extension
 print(f"MODEL_PATH: {MODEL_PATH}")
@@ -27,18 +41,20 @@ model = None
 model_type = None  # Track how the model was loaded
 
 try:
-    if os.path.isdir(MODEL_PATH):
+    if MODEL_PATH and os.path.isdir(MODEL_PATH):
         # It's a SavedModel directory, use TFSMLayer
         print(f"Detected SavedModel directory at {MODEL_PATH}, loading with TFSMLayer...")
         model = TFSMLayer(MODEL_PATH, call_endpoint='serving_default')
         model_type = 'tfsm'
         print(f"✅ Model loaded as TFSMLayer from {MODEL_PATH}")
-    else:
+    elif MODEL_PATH and os.path.isfile(MODEL_PATH):
         print(f"Detected model file at {MODEL_PATH}, loading with load_model...")
-        # Add custom_objects if needed, e.g. {'CustomLayer': CustomLayer}
         model = load_model(MODEL_PATH, custom_objects={})
         model_type = 'keras'
         print(f"✅ Model loaded with load_model from {MODEL_PATH}")
+    else:
+        print("❌ No valid model file or directory found.")
+        model = None
 except Exception as e:
     print(f"❌ Error loading model: {e}")
     model = None
